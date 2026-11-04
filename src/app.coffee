@@ -219,9 +219,14 @@ class App
     @ui = new UI(@settings, @game, @audio)
     @ui.onRoundComplete = => @startRound()
 
+  _isDebug: ->
+    params = new URLSearchParams(window.location.search)
+    params.get('debug') == '1'
+
   startRound: =>
     @game.generateTones()
-    @ui.updateFrequencyDisplay()
+    if @_isDebug()
+      @ui.updateFrequencyDisplay()
     @audio.play(@game.firstFrequency, 'first')
     setTimeout =>
       @audio.play(@game.secondFrequency, 'second')
@@ -234,6 +239,9 @@ class App
     @ui.setupUI()
     @ui.setupKeyBindings()
     @ui.setupClicks()
+    unless @_isDebug()
+      @ui.$firstFrequency.hide()
+      @ui.$secondFrequency.hide()
 
 $ ->
   app = new App()

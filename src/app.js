@@ -335,9 +335,17 @@
       })(this);
     }
 
+    App.prototype._isDebug = function() {
+      var params;
+      params = new URLSearchParams(window.location.search);
+      return params.get('debug') === '1';
+    };
+
     App.prototype.startRound = function() {
       this.game.generateTones();
-      this.ui.updateFrequencyDisplay();
+      if (this._isDebug()) {
+        this.ui.updateFrequencyDisplay();
+      }
       this.audio.play(this.game.firstFrequency, 'first');
       return setTimeout((function(_this) {
         return function() {
@@ -352,7 +360,11 @@
     App.prototype.setup = function() {
       this.ui.setupUI();
       this.ui.setupKeyBindings();
-      return this.ui.setupClicks();
+      this.ui.setupClicks();
+      if (!this._isDebug()) {
+        this.ui.$firstFrequency.hide();
+        return this.ui.$secondFrequency.hide();
+      }
     };
 
     return App;
