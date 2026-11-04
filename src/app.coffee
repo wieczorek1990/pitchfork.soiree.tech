@@ -1,27 +1,86 @@
 class Settings
   # Animations
-  ANIMATION_TIME: 128;
+  ANIMATION_TIME: 128
   # Frequencies
-  LOWEST_FREQUENCY: 110;
-  HIGHEST_FREQUENCY: 880;
+  LOWEST_FREQUENCY: 110
+  HIGHEST_FREQUENCY: 880
   # Audio
-  PLAYING_TIME: 1024;
+  PLAYING_TIME: 1024
   GAIN: 0.1
   # Interstitial
-  INTERSTITIAL_SHOW_TIME: 800;
-  INTERSTITIAL_FADE_TIME: 300;
+  INTERSTITIAL_SHOW_TIME: 800
+  INTERSTITIAL_FADE_TIME: 300
+
 
 class Game
+  constructor: (@settings) ->
+
   firstFrequency: 0
   secondFrequency: 0
   currentPlayer: null
+  isRoundStarting: false
+
+  _getFrequencySpan: (frequency) ->
+    low = @settings.LOWEST_FREQUENCY
+    base = low
+    loop
+      if base <= frequency and frequency < 2 * base
+        break
+      else
+        base *= 2
+    high = base
+    [low, high]
+
+  _rand: (minimum, maximum) ->
+    random = minimum + Math.random() * (maximum - minimum + 1)
+    Math.floor random
+
+  generateTones: ->
+    first = @_rand(@settings.LOWEST_FREQUENCY, @settings.HIGHEST_FREQUENCY)
+    [low, high] = @_getFrequencySpan(first)
+    second = @_rand(low, high)
+    @firstFrequency = first
+    @secondFrequency = second
+
 
 class Audio
+  constructor: (@settings) ->
+
   context: null
   oscillator: null
-  gain: null
+
+  init: ->
+    audioContext = window.AudioContext || window.webkitAudioContext || false
+    if audioContext
+      @context = new audioContext()
+    else
+      console.error 'Nor window.AudioContext, nor window.webkitAudioContext is supported. Cannot continue.'
+
+  _getOscillator: (frequency) ->
+    oscillator = @context.createOscillator()
+    gain = @context.createGain()
+    gain.gain.value = @settings.GAIN
+    oscillator.connect(gain)
+    oscillator.type = 'sine'
+    oscillator.frequency.setValueAtTime(frequency, @context.currentTime)
+    oscillator.connect(@context.destination)
+    oscillator
+
+  play: (frequency, name) ->
+    if @oscillator?
+      @oscillator.stop()
+    @oscillator = @_getOscillator(frequency)
+    @oscillator.start()
+    @currentPlayer = name
+
+  stop: ->
+    @oscillator?.stop()
+
 
 class UI
+  constructor: (@settings, @game, @audio) ->
+    @onRoundComplete = ->
+
   # Repeat
   $first: null
   $second: null
@@ -33,181 +92,127 @@ class UI
   $correctInterstitial: null
   $failureInterstitial: null
 
-s = new Settings()
-g = new Game()
-a = new Audio()
-ui = new UI()
+  setupUI: ->
+    @$first = $ '#first'
+    @$second = $ '#second'
+    @$lower = $ '#lower'
+    @$equal = $ '#equal'
+    @$higher = $ '#higher'
+    @$correctInterstitial = $ '#correct-interstitial'
+    @$failureInterstitial = $ '#failure-interstitial'
 
-getFrequencySpan = (frequency) ->
-  low = s.LOWEST_FREQUENCY;
+  setupKeyBindings: ->
+    Mousetrap.bind 'left', =>
+      @$first.click()
+    Mousetrap.bind 'right', =>
+      @$second.click()
+    Mousetrap.bind 'down', =>
+      @$lower.click()
+    Mousetrap.bind 'space', =>
+      @$equal.click()
+    Mousetrap.bind 'up', =>
+      @$higher.click()
 
-  base = low
-  loop
-    if base <= frequency and frequency < 2 * base
-      break
+  setupClicks: =>
+    @$first.click =>
+      @check(@$first[0], @game.firstFrequency, 'first')
+    @$second.click =>
+      @check(@$second[0], @game.secondFrequency, 'second')
+    @$lower.click =>
+      @answer(@$lower[0], 'lower')
+    @$equal.click =>
+      @answer(@$equal[0], 'equal')
+    @$higher.click =>
+      @answer(@$higher[0], 'higher')
+
+  animate: ($element) ->
+    $element.animate
+      'width': '-=16px'
+      'height': '-=16px'
+      'margin-top': '+=8px'
+      'margin-left': '+=8px'
+    , @settings.ANIMATION_TIME, 'swing', =>
+      $element.animate
+        'width': '+=16px'
+        'height': '+=16px'
+        'margin-top': '-=8px'
+        'margin-left': '-=8px'
+      , @settings.ANIMATION_TIME
+
+  check: (self, frequency, name) ->
+    unless @game.isRoundStarting
+      @animate($(self))
+      @audio.play(frequency, name)
+
+  _checkAnswer: (answer, onRoundComplete) ->
+    success = switch answer
+      when 'lower'
+        @game.firstFrequency > @game.secondFrequency
+      when 'equal'
+        @game.firstFrequency == @game.secondFrequency
+      when 'higher'
+        @game.firstFrequency < @game.secondFrequency
+
+    $body = $ 'body'
+    $advices = $ '.advice'
+    if success
+      $body.removeClass 'body-inverted'
+      $advices.removeClass 'advice-inverted'
+      @$correctInterstitial.addClass 'show'
+      setTimeout =>
+        @$correctInterstitial.addClass 'hide'
+        setTimeout =>
+          @$correctInterstitial.removeClass 'show hide'
+          onRoundComplete()
+        , @settings.INTERSTITIAL_FADE_TIME
+      , @settings.INTERSTITIAL_SHOW_TIME
     else
-      base *= 2
-  high = base
+      $body.addClass 'body-inverted'
+      $advices.addClass 'advice-inverted'
+      @$failureInterstitial.addClass 'show'
+      setTimeout =>
+        @$failureInterstitial.addClass 'hide'
+        setTimeout =>
+          @$failureInterstitial.removeClass 'show hide'
+          onRoundComplete()
+        , @settings.INTERSTITIAL_FADE_TIME
+      , @settings.INTERSTITIAL_SHOW_TIME
 
-  return [low, high]
+    @audio.stop()
+    @game.generateTones()
+    success
 
-rand = (minimum, maximum) ->
-    random = minimum + Math.random() * (maximum - minimum + 1)
-    return Math.floor random
+  answer: (self, name) ->
+    unless @game.isRoundStarting
+      @animate($(self))
+      @_checkAnswer(name, @onRoundComplete)
 
-generateTones = ->
-  first = rand(s.LOWEST_FREQUENCY, s.HIGHEST_FREQUENCY)
 
-  frequencySpan = getFrequencySpan(first)
-  [low, high] = frequencySpan
-  second = rand(low, high)
+class App
+  constructor: ->
+    @settings = new Settings()
+    @game = new Game(@settings)
+    @audio = new Audio(@settings)
+    @ui = new UI(@settings, @game, @audio)
+    @ui.onRoundComplete = => @startRound()
 
-  g.firstFrequency = first
-  g.secondFrequency = second
+  startRound: =>
+    @game.generateTones()
+    @audio.play(@game.firstFrequency, 'first')
+    setTimeout =>
+      @audio.play(@game.secondFrequency, 'second')
+      setTimeout =>
+        @audio.stop()
+      , @settings.PLAYING_TIME
+    , @settings.PLAYING_TIME
 
-getOscillator = (frequency) ->
-  oscillator = a.context.createOscillator()
-
-  gain = a.context.createGain()
-  gain.gain.value = s.GAIN
-  oscillator.connect(gain)
-
-  oscillator.type = 'sine'
-  oscillator.frequency.setValueAtTime(frequency, a.context.currentTime)
-  oscillator.connect(a.context.destination)
-
-  return oscillator
-
-checkAnswer = (answer) ->
-  switch answer
-    when 'lower'
-      success = g.firstFrequency > g.secondFrequency
-    when 'equal'
-      success = g.firstFrequency == g.secondFrequency
-    when 'higher'
-      success = g.firstFrequency < g.secondFrequency
-
-  $body = $ 'body'
-  $advices = $ '.advice'
-  if success
-    $body.removeClass 'body-inverted'
-    $advices.removeClass 'advice-inverted'
-    ui.$correctInterstitial.addClass 'show'
-    setTimeout ->
-      ui.$correctInterstitial.addClass 'hide'
-      setTimeout ->
-        ui.$correctInterstitial.removeClass 'show hide'
-        startRound()
-      , s.INTERSTITIAL_FADE_TIME
-    , s.INTERSTITIAL_SHOW_TIME
-  else
-    $body.addClass 'body-inverted'
-    $advices.addClass 'advice-inverted'
-    ui.$failureInterstitial.addClass 'show'
-    setTimeout ->
-      ui.$failureInterstitial.addClass 'hide'
-      setTimeout ->
-        ui.$failureInterstitial.removeClass 'show hide'
-        startRound()
-      , s.INTERSTITIAL_FADE_TIME
-    , s.INTERSTITIAL_SHOW_TIME
-
-  a.oscillator.stop()
-  generateTones()
-  return success
-
-animate = (self) ->
-  $this = $ self
-  $this.animate {
-    'width': '-=16px'
-    'height': '-=16px'
-    'margin-top': '+=8px'
-    'margin-left': '+=8px'
-  }, s.ANIMATION_TIME, 'swing', ->
-    $this.animate {
-      'width': '+=16px'
-      'height': '+=16px'
-      'margin-top': '-=8px'
-      'margin-left': '-=8px'
-    }, s.ANIMATION_TIME
-
-play = (frequency, name) ->
-  if g.currentPlayer == name
-    a.oscillator.stop()
-  else
-    a.oscillator?.stop()
-    a.oscillator = getOscillator(frequency)
-    a.oscillator.start()
-  g.currentPlayer = name
-
-check = (self, frequency, name) ->
-  unless g.isRoundStarting
-    animate self
-    play frequency, name
-
-answer = (self, name) ->
-  unless g.isRoundStarting
-    animate self
-    checkAnswer name
-
-setupUI = ->
-  ui.$first = $ '#first'
-  ui.$second = $ '#second'
-  ui.$lower = $ '#lower'
-  ui.$equal = $ '#equal'
-  ui.$higher = $ '#higher'
-  ui.$correctInterstitial = $ '#correct-interstitial'
-  ui.$failureInterstitial = $ '#failure-interstitial'
-
-setupKeyBindings = ->
-  Mousetrap.bind 'left', ->
-    ui.$first.click()
-  Mousetrap.bind 'right', ->
-    ui.$second.click()
-  Mousetrap.bind 'down', ->
-    ui.$lower.click()
-  Mousetrap.bind 'space', ->
-    ui.$equal.click()
-  Mousetrap.bind 'up', ->
-    ui.$higher.click()
-
-setupClicks = ->
-  ui.$first.click ->
-    check this, g.firstFrequency, 'first'
-  ui.$second.click ->
-    check this, g.secondFrequency, 'second'
-  ui.$lower.click ->
-    answer this, 'lower'
-  ui.$equal.click ->
-    answer this, 'equal'
-  ui.$higher.click ->
-    answer this, 'higher'
-
-setupAudio = ->
-  audioContext = window.AudioContext || window.webkitAudioContext || false
-  if audioContext
-    a.context = new audioContext();
-  else
-    console.error(
-        'Nor window.AudioContext, nor window.webkitAudioContext is supported. Cannot continue.'
-    )
-
-startRound = ->
-  generateTones()
-  play g.firstFrequency, 'first'
-  setTimeout ->
-    play g.secondFrequency, 'second'
-    setTimeout ->
-      a.oscillator.stop()
-    , s.PLAYING_TIME
-  , s.PLAYING_TIME
-
-setup = ->
-  setupUI()
-  setupKeyBindings()
-  setupClicks()
-  setupAudio()
+  setup: =>
+    @audio.init()
+    @ui.setupUI()
+    @ui.setupKeyBindings()
+    @ui.setupClicks()
 
 $ ->
-  setup()
-  startRound()
+  app = new App()
+  app.setup()
+  app.startRound()
