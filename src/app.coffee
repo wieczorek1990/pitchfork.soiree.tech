@@ -7,6 +7,9 @@ class Settings
   # Audio
   PLAYING_TIME: 1024;
   GAIN: 0.1
+  # Interstitial
+  INTERSTITIAL_SHOW_TIME: 800;
+  INTERSTITIAL_FADE_TIME: 300;
 
 class Game
   firstFrequency: 0
@@ -26,6 +29,9 @@ class UI
   $lower: null
   $equal: null
   $higher: null
+  # Interstitials
+  $correctInterstitial: null
+  $failureInterstitial: null
 
 s = new Settings()
 g = new Game()
@@ -86,12 +92,29 @@ checkAnswer = (answer) ->
   if success
     $body.removeClass 'body-inverted'
     $advices.removeClass 'advice-inverted'
+    ui.$correctInterstitial.addClass 'show'
+    setTimeout ->
+      ui.$correctInterstitial.addClass 'hide'
+      setTimeout ->
+        ui.$correctInterstitial.removeClass 'show hide'
+        startRound()
+      , s.INTERSTITIAL_FADE_TIME
+    , s.INTERSTITIAL_SHOW_TIME
   else
     $body.addClass 'body-inverted'
     $advices.addClass 'advice-inverted'
+    ui.$failureInterstitial.addClass 'show'
+    setTimeout ->
+      ui.$failureInterstitial.addClass 'hide'
+      setTimeout ->
+        ui.$failureInterstitial.removeClass 'show hide'
+        startRound()
+      , s.INTERSTITIAL_FADE_TIME
+    , s.INTERSTITIAL_SHOW_TIME
 
   a.oscillator.stop()
   generateTones()
+  return success
 
 animate = (self) ->
   $this = $ self
@@ -126,7 +149,6 @@ answer = (self, name) ->
   unless g.isRoundStarting
     animate self
     checkAnswer name
-    startRound()
 
 setupUI = ->
   ui.$first = $ '#first'
@@ -134,6 +156,8 @@ setupUI = ->
   ui.$lower = $ '#lower'
   ui.$equal = $ '#equal'
   ui.$higher = $ '#higher'
+  ui.$correctInterstitial = $ '#correct-interstitial'
+  ui.$failureInterstitial = $ '#failure-interstitial'
 
 setupKeyBindings = ->
   Mousetrap.bind 'left', ->
