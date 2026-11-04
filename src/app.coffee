@@ -32,15 +32,11 @@ class Game
     [low, high]
 
   _rand: (minimum, maximum) ->
-    random = minimum + Math.random() * (maximum - minimum + 1)
-    Math.floor random
+    Math.floor(Math.random() * (maximum - minimum + 1)) + minimum
 
   generateTones: ->
-    first = @_rand(@settings.LOWEST_FREQUENCY, @settings.HIGHEST_FREQUENCY)
-    [low, high] = @_getFrequencySpan(first)
-    second = @_rand(low, high)
-    @firstFrequency = first
-    @secondFrequency = second
+    @firstFrequency = @_rand(@settings.LOWEST_FREQUENCY, @settings.HIGHEST_FREQUENCY)
+    @secondFrequency = @_rand(@settings.LOWEST_FREQUENCY, @settings.HIGHEST_FREQUENCY)
 
 
 class Audio
