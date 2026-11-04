@@ -80,7 +80,7 @@
 .text-large {
     text-align: center;
     vertical-align: middle;
-    line-height: 192px;
+    line-height: 160px;
     font-size: 32px;
 }
 
@@ -167,6 +167,10 @@
 }
 
 .start-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     text-align: center;
 }
 
@@ -174,4 +178,12 @@
     font-family: 'Raleway', sans-serif;
     font-size: 24px;
     padding: 16px 48px;
+}
+
+.frequency-label {
+    font-family: 'Raleway', sans-serif;
+    text-align: center;
+    font-size: 14px;
+    color: white;
+    margin-top: 8px;
 }

@@ -144,6 +144,10 @@ UI = (function() {
 
   UI.prototype.$gameContent = null;
 
+  UI.prototype.$firstFrequency = null;
+
+  UI.prototype.$secondFrequency = null;
+
   UI.prototype.setupUI = function() {
     this.$first = $('#first');
     this.$second = $('#second');
@@ -154,7 +158,14 @@ UI = (function() {
     this.$failureInterstitial = $('#failure-interstitial');
     this.$startButton = $('#start-button');
     this.$startOverlay = $('#start-overlay');
-    return this.$gameContent = $('#game-content');
+    this.$gameContent = $('#game-content');
+    this.$firstFrequency = $('#first-frequency');
+    return this.$secondFrequency = $('#second-frequency');
+  };
+
+  UI.prototype.updateFrequencyDisplay = function() {
+    this.$firstFrequency.text(this.game.firstFrequency + ' Hz');
+    return this.$secondFrequency.text(this.game.secondFrequency + ' Hz');
   };
 
   UI.prototype.setupKeyBindings = function() {
@@ -325,6 +336,7 @@ App = (function() {
 
   App.prototype.startRound = function() {
     this.game.generateTones();
+    this.ui.updateFrequencyDisplay();
     this.audio.play(this.game.firstFrequency, 'first');
     return setTimeout((function(_this) {
       return function() {

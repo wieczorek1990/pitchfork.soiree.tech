@@ -94,6 +94,9 @@ class UI
   $startOverlay: null
   # Game content
   $gameContent: null
+  # Frequency labels
+  $firstFrequency: null
+  $secondFrequency: null
 
   setupUI: ->
     @$first = $ '#first'
@@ -106,6 +109,12 @@ class UI
     @$startButton = $ '#start-button'
     @$startOverlay = $ '#start-overlay'
     @$gameContent = $ '#game-content'
+    @$firstFrequency = $ '#first-frequency'
+    @$secondFrequency = $ '#second-frequency'
+
+  updateFrequencyDisplay: ->
+    @$firstFrequency.text(@game.firstFrequency + ' Hz')
+    @$secondFrequency.text(@game.secondFrequency + ' Hz')
 
   setupKeyBindings: ->
     Mousetrap.bind 'left', =>
@@ -212,6 +221,7 @@ class App
 
   startRound: =>
     @game.generateTones()
+    @ui.updateFrequencyDisplay()
     @audio.play(@game.firstFrequency, 'first')
     setTimeout =>
       @audio.play(@game.secondFrequency, 'second')
