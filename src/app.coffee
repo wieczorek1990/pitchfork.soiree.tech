@@ -49,6 +49,7 @@ class Audio
     audioContext = window.AudioContext || window.webkitAudioContext || false
     if audioContext
       @context = new audioContext()
+      return @context.resume()
     else
       console.error 'Nor window.AudioContext, nor window.webkitAudioContext is supported. Cannot continue.'
 
@@ -76,6 +77,7 @@ class Audio
 class UI
   constructor: (@settings, @game, @audio) ->
     @onRoundComplete = ->
+    @onStart = ->
 
   # Repeat
   $first: null
@@ -87,6 +89,11 @@ class UI
   # Interstitials
   $correctInterstitial: null
   $failureInterstitial: null
+  # Start button
+  $startButton: null
+  $startOverlay: null
+  # Game content
+  $gameContent: null
 
   setupUI: ->
     @$first = $ '#first'
@@ -96,6 +103,9 @@ class UI
     @$higher = $ '#higher'
     @$correctInterstitial = $ '#correct-interstitial'
     @$failureInterstitial = $ '#failure-interstitial'
+    @$startButton = $ '#start-button'
+    @$startOverlay = $ '#start-overlay'
+    @$gameContent = $ '#game-content'
 
   setupKeyBindings: ->
     Mousetrap.bind 'left', =>
@@ -120,6 +130,14 @@ class UI
       @answer(@$equal[0], 'equal')
     @$higher.click =>
       @answer(@$higher[0], 'higher')
+    @$startButton.click =>
+      @hideStartOverlay(@onStart)
+
+  hideStartOverlay: (callback) ->
+    @$gameContent.removeClass('game-hidden')
+    @$startOverlay.addClass('start-overlay-hidden')
+    if callback?
+      callback()
 
   animate: ($element) ->
     $element.animate
@@ -203,7 +221,6 @@ class App
     , @settings.PLAYING_TIME
 
   setup: =>
-    @audio.init()
     @ui.setupUI()
     @ui.setupKeyBindings()
     @ui.setupClicks()
@@ -211,4 +228,6 @@ class App
 $ ->
   app = new App()
   app.setup()
-  app.startRound()
+  app.ui.onStart = =>
+    app.audio.init()
+    app.startRound()

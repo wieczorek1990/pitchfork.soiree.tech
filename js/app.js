@@ -77,7 +77,8 @@ Audio = (function() {
     var audioContext;
     audioContext = window.AudioContext || window.webkitAudioContext || false;
     if (audioContext) {
-      return this.context = new audioContext();
+      this.context = new audioContext();
+      return this.context.resume();
     } else {
       return console.error('Nor window.AudioContext, nor window.webkitAudioContext is supported. Cannot continue.');
     }
@@ -120,6 +121,7 @@ UI = (function() {
     this.audio = audio;
     this.setupClicks = bind(this.setupClicks, this);
     this.onRoundComplete = function() {};
+    this.onStart = function() {};
   }
 
   UI.prototype.$first = null;
@@ -136,6 +138,12 @@ UI = (function() {
 
   UI.prototype.$failureInterstitial = null;
 
+  UI.prototype.$startButton = null;
+
+  UI.prototype.$startOverlay = null;
+
+  UI.prototype.$gameContent = null;
+
   UI.prototype.setupUI = function() {
     this.$first = $('#first');
     this.$second = $('#second');
@@ -143,7 +151,10 @@ UI = (function() {
     this.$equal = $('#equal');
     this.$higher = $('#higher');
     this.$correctInterstitial = $('#correct-interstitial');
-    return this.$failureInterstitial = $('#failure-interstitial');
+    this.$failureInterstitial = $('#failure-interstitial');
+    this.$startButton = $('#start-button');
+    this.$startOverlay = $('#start-overlay');
+    return this.$gameContent = $('#game-content');
   };
 
   UI.prototype.setupKeyBindings = function() {
@@ -195,11 +206,24 @@ UI = (function() {
         return _this.answer(_this.$equal[0], 'equal');
       };
     })(this));
-    return this.$higher.click((function(_this) {
+    this.$higher.click((function(_this) {
       return function() {
         return _this.answer(_this.$higher[0], 'higher');
       };
     })(this));
+    return this.$startButton.click((function(_this) {
+      return function() {
+        return _this.hideStartOverlay(_this.onStart);
+      };
+    })(this));
+  };
+
+  UI.prototype.hideStartOverlay = function(callback) {
+    this.$gameContent.removeClass('game-hidden');
+    this.$startOverlay.addClass('start-overlay-hidden');
+    if (callback != null) {
+      return callback();
+    }
   };
 
   UI.prototype.animate = function($element) {
@@ -313,7 +337,6 @@ App = (function() {
   };
 
   App.prototype.setup = function() {
-    this.audio.init();
     this.ui.setupUI();
     this.ui.setupKeyBindings();
     return this.ui.setupClicks();
@@ -327,5 +350,10 @@ $(function() {
   var app;
   app = new App();
   app.setup();
-  return app.startRound();
+  return app.ui.onStart = (function(_this) {
+    return function() {
+      app.audio.init();
+      return app.startRound();
+    };
+  })(this);
 });
