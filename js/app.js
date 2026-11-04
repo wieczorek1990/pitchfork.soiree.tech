@@ -186,7 +186,20 @@ UI = (function() {
     })(this));
     Mousetrap.bind('space', (function(_this) {
       return function() {
-        return _this.$equal.click();
+        if (_this.$startOverlay.is(':visible')) {
+          return _this.$startButton.click();
+        } else {
+          return _this.$equal.click();
+        }
+      };
+    })(this));
+    Mousetrap.bind('enter', (function(_this) {
+      return function() {
+        if (_this.$startOverlay.is(':visible')) {
+          return _this.$startButton.click();
+        } else {
+          return _this.$equal.click();
+        }
       };
     })(this));
     return Mousetrap.bind('up', (function(_this) {

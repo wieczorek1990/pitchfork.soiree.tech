@@ -124,7 +124,15 @@ class UI
     Mousetrap.bind 'down', =>
       @$lower.click()
     Mousetrap.bind 'space', =>
-      @$equal.click()
+      if @$startOverlay.is(':visible')
+        @$startButton.click()
+      else
+        @$equal.click()
+    Mousetrap.bind 'enter', =>
+      if @$startOverlay.is(':visible')
+        @$startButton.click()
+      else
+        @$equal.click()
     Mousetrap.bind 'up', =>
       @$higher.click()
 
